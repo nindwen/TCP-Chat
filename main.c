@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-void handleConnection(int, int*);
+void handleConnection(int, int*, int);
 void serverLoop(int*);
 void sendToClient(int);
 void error(const char *msg)
@@ -56,17 +56,19 @@ int main(int argc, char *argv[])
 
       listen(sockfd,5);
       clilen = sizeof(cli_addr);
+      int maxClientId = 0;
       while (1) {
             newsockfd = accept(sockfd, 
                         (struct sockaddr *) &cli_addr, &clilen);
             if (newsockfd < 0) 
                   error("ERROR on accept");
+            maxClientId++;
             pid = fork();
             if (pid < 0)
                   error("ERROR on fork");
             if (pid == 0)  {
                   close(sockfd);
-                  handleConnection(newsockfd, fildes);
+                  handleConnection(newsockfd, fildes, maxClientId);
                   exit(0);
             }
             else close(newsockfd);
@@ -80,7 +82,7 @@ int main(int argc, char *argv[])
   for each connection.  It handles all communication
   once a connnection has been established.
  *****************************************/
-void handleConnection (int sock, int* pipe)
+void handleConnection (int sock, int* pipe, int maxClientId)
 {
       switch(fork()) {
             case -1:
@@ -93,13 +95,14 @@ void handleConnection (int sock, int* pipe)
       close(pipe[0]);
       int n;
       char buffer[256];
+      char with_nick[256];
 
-      while(1) {
+      while(read(sock,buffer,255-strlen(with_nick))) {
+            sprintf(with_nick, "[%5d]: ", maxClientId);
+            strcat(with_nick, buffer);
+            n = write(pipe[1],with_nick,strlen(with_nick));
             bzero(buffer,256);
-            n = read(sock,buffer,255);
-            if (n < 0) error("ERROR reading from socket");
-            n = write(pipe[1],buffer,strlen(buffer));
-            if (n < 0) error("ERROR writing to pipe");
+            bzero(with_nick,256);
       }
 }
 
