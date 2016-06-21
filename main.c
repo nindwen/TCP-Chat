@@ -124,6 +124,7 @@ void sendToClient(int sock) {
             bzero(buffer,256);
             fread(buffer,1,255,handle);
             write(sock,buffer,strlen(buffer));
+            sleep(1);
       }
 }
 
